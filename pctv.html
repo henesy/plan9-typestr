@@ -1,0 +1,114 @@
+<html>
+<head>
+<title>
+plan 9
+</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<p>
+Mirrored from: http://www.quanstro.net/plan9/pctv.html
+</p>
+<p>
+	A small illustration of how to use <tt>typeof</tt> in ken's c compiler
+	to implement <tt>%v</tt>.
+</p>
+<p>
+	A small change to the compiler's varadic function checking is required
+	to allow a single verb to use more than one argument.  For brevity this
+	change is excluded.
+</p>
+<pre>
+#include &lt;u.h&gt;
+#include &lt;libc.h&gt;
+
+int
+fmtv(Fmt *f)
+{
+	ulong sign;
+	extern int _ifmt(Fmt*);
+	extern int _strfmt(Fmt*);
+	extern int _runesfmt(Fmt*);
+
+	sign = va_arg(f->args, ulong);
+	switch(sign){
+	case signof(uchar):
+		f->flags |= FmtUnsigned;
+	case signof(char):
+		f->flags |= FmtByte;
+		f->r = f->flags&FmtSharp? 'x': 'd';
+		return _ifmt(f);
+	case signof(ushort):
+		f->flags |= FmtUnsigned;
+	case signof(short):
+		f->flags |= FmtShort;
+		f->r = f->flags&FmtSharp? 'x': 'd';
+		return _ifmt(f);
+	case signof(uint):
+		f->flags |= FmtUnsigned;
+	case signof(int):
+		f->r = f->flags&FmtSharp? 'x': 'd';
+		return _ifmt(f);
+	case signof(ulong):
+		f->flags |= FmtUnsigned;
+	case signof(long):
+		f->r = f->flags&FmtSharp? 'x': 'd';
+		f->flags |= FmtLong;
+		return _ifmt(f);
+	case signof(vlong):
+		f->flags |= FmtUnsigned;
+	case signof(uvlong):
+		f->r = f->flags&FmtSharp? 'x': 'd';
+		f->flags |= FmtVLong;
+		return _ifmt(f);
+
+	case signof(char*):
+	case signof(char[]):
+		return _strfmt(f);
+	case signof(Rune*):
+	case signof(Rune[]):
+		return _runesfmt(f);
+
+	default:
+		return fmtprint(f, "<%%v>");
+	}
+}
+
+#pragma	varargck	type	"v"	ulong,char
+#pragma	varargck	type	"v"	ulong,short
+#pragma	varargck	type	"v"	ulong,int
+#pragma	varargck	type	"v"	ulong,long
+#pragma	varargck	type	"v"	ulong,vlong
+#pragma	varargck	type	"v"	ulong,uchar
+#pragma	varargck	type	"v"	ulong,ushort
+#pragma	varargck	type	"v"	ulong,uint
+#pragma	varargck	type	"v"	ulong,ulong
+#pragma	varargck	type	"v"	ulong,uvlong
+
+#pragma	varargck	type	"v"	ulong,char*
+
+#define	V(x)	signof(x), (x)
+void
+main(void)
+{
+	u32int x;
+
+	fmtinstall('v', fmtv);
+
+	print("%v\n", V(1));
+	print("%v\n", V("abc"));
+
+	x = 32;
+	print("%v\n", V(x));
+	print("%#v\n", V(x));
+
+	print("%v\n", V((char)x));
+	print("%v\n", V((int)x));
+	print("%v\n", V((long)x));
+	print("%v\n", V((vlong)x));
+
+	exits("");
+}
+</pre>
+</body>
+</html>
